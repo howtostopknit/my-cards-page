@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cards Example</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 40px;
+    }
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 24px;
+      width: 250px;
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-5px) scale(1.03);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
+    .card-title {
+      font-size: 1.3em;
+      margin-bottom: 12px;
+      color: #333;
+    }
+    .card-text {
+      color: #555;
+      font-size: 1em;
+    }
+  </style>
+</head>
+<body>
+  <h1>My Cards</h1>
+  <div class="container">
+    <div class="card">
+      <div class="card-title">Card One</div>
+      <div class="card-text">This is the first card. You can put any content here.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Card Two</div>
+      <div class="card-text">Here's another card with some different text.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Card Three</div>
+      <div class="card-text">Cards are great for displaying information in a neat way.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Card Four</div>
+      <div class="card-text">You can add as many cards as you like!</div>
+    </div>
+  </div>
+</body>
+</html>
