@@ -1,63 +1,188 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Cards Example</title>
+  <title>Карточки Пушкина + Firebase</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      padding: 40px;
-    }
-    .container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      justify-content: center;
-    }
-    .card {
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      padding: 24px;
-      width: 250px;
-      transition: transform 0.2s;
-    }
-    .card:hover {
-      transform: translateY(-5px) scale(1.03);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.15);
-    }
-    .card-title {
-      font-size: 1.3em;
-      margin-bottom: 12px;
-      color: #333;
-    }
-    .card-text {
-      color: #555;
-      font-size: 1em;
-    }
+    body { background: #f4f4f4; min-height: 100vh; margin: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: Arial, sans-serif; }
+    .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.12); padding: 40px 30px; min-width: 320px; text-align: center; font-size: 1.3em; margin-bottom: 30px; transition: box-shadow 0.2s; }
+    .btn { padding: 12px 32px; font-size: 1em; border: none; border-radius: 8px; background: #4a90e2; color: #fff; cursor: pointer; transition: background 0.2s; margin-bottom: 20px; }
+    .btn:hover { background: #357ab8; }
+    .input-block { display: flex; flex-direction: column; align-items: center; margin-top: 10px; }
+    .user-input { resize: vertical; font-size: 1em; padding: 12px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 16px; min-width: 416px; min-height: 104px; width: 416px; height: 104px; box-sizing: border-box; max-width: 90vw; }
+    .submit-btn { padding: 10px 28px; font-size: 1em; border: none; border-radius: 8px; background: #27ae60; color: #fff; cursor: pointer; transition: background 0.2s; }
+    .submit-btn:hover { background: #1e874b; }
+    .error-message { color: #c0392b; font-size: 1em; margin-bottom: 10px; min-height: 24px; text-align: center; }
   </style>
 </head>
 <body>
-  <h1>My Cards</h1>
-  <div class="container">
-    <div class="card">
-      <div class="card-title">Card One</div>
-      <div class="card-text">This is the first card. You can put any content here.</div>
-    </div>
-    <div class="card">
-      <div class="card-title">Card Two</div>
-      <div class="card-text">Here's another card with some different text.</div>
-    </div>
-    <div class="card">
-      <div class="card-title">Card Three</div>
-      <div class="card-text">Cards are great for displaying information in a neat way.</div>
-    </div>
-    <div class="card">
-      <div class="card-title">Card Four</div>
-      <div class="card-text">You can add as many cards as you like!</div>
-    </div>
+  <div class="card" id="card"></div>
+  <button class="btn" id="nextBtn">Дальше</button>
+  <div class="input-block">
+    <div class="error-message" id="errorMsg"></div>
+    <textarea class="user-input" id="userInput" placeholder="Введите ваш текст..."></textarea>
+    <button class="submit-btn" id="submitBtn">Отправить</button>
   </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-analytics.js";
+    import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+    // Твой конфиг
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxkXG61TS4ehcf79cWPZkCvzQs0CkDy_Y",
+      authDomain: "knitting-cards.firebaseapp.com",
+      projectId: "knitting-cards",
+      storageBucket: "knitting-cards.firebasestorage.app",
+      messagingSenderId: "297401936712",
+      appId: "1:297401936712:web:cca5d91387ea4f8f7da17d",
+      measurementId: "G-NN3VCPXYTG"
+    };
+
+    // Инициализация
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getFirestore(app);
+
+    let phrases = [];
+    let usedIndexes = [];
+
+    // ВРЕМЕННЫЙ СКРИПТ ДЛЯ МАССОВОГО ДОБАВЛЕНИЯ ФРАЗ
+    // УДАЛИ ЭТОТ БЛОК ПОСЛЕ ПЕРВОГО ЗАПУСКА!
+    async function addManyPhrasesOnce() {
+      const phrasesToAdd = [
+        "Ну почему у меня опять правая варежка больше левой? Это судьба?",
+        "Вяжу третий день, а шарф всё ещё короче моего терпения.",
+        "Кто придумал распускать? Я уже распустила свою душу!",
+        "Пряжа закончилась ровно за 5 рядов до финиша. Это заговор?",
+        "Мой кот считает, что клубки — это его игрушки. Я просто живу в его мире.",
+        "Схема понятна всем, кроме меня. Может, я не из этого вязального клана?",
+        "Почему у меня всегда лишняя петля? Может, это бонус?",
+        "Вяжу по описанию, а получается что-то из параллельной вселенной.",
+        "Опять забыла, где остановилась. Моя память — как дырявый носок.",
+        "Вяжу шапку, а выходит мешок для картошки. Ну хоть что-то полезное!",
+        "Почему у всех ровно, а у меня как будто вязал ёжик в тумане?",
+        "Купила пряжу, а цвет дома оказался 'разочарование'.",
+        "Вяжу рукав, а он всё длиннее и длиннее. Может, это шарф?",
+        "Почему все вяжут быстро, а я только распускаю?",
+        "Мои спицы опять сбежали под диван. Может, они тоже устали?",
+        "Вяжу плед, а получается салфетка. Ну, зато быстро!",
+        "Опять ошиблась в узоре. Может, это новый тренд?",
+        "Почему у меня всегда не хватает одного мотка? Это проклятие?",
+        "Вяжу носки, а выходит тапок для великана.",
+        "Мой кот — главный дизайнер: без него ни один клубок не выживает."
+      ];
+      // Проверим, есть ли уже эти фразы в базе (чтобы не дублировать)
+      const existing = [];
+      const querySnapshot = await getDocs(collection(db, "phrases"));
+      querySnapshot.forEach((doc) => {
+        existing.push(doc.data().text);
+      });
+      for (const phrase of phrasesToAdd) {
+        if (!existing.includes(phrase)) {
+          await addDoc(collection(db, "phrases"), { text: phrase });
+        }
+      }
+      console.log("Все фразы добавлены! Удали временный скрипт.");
+    }
+    // Раскомментируй строку ниже для однократного запуска, потом закомментируй обратно или удали!
+    // addManyPhrasesOnce();
+
+    // --- ДАЛЬШЕ ОСНОВНОЙ КОД ---
+
+    // Загрузка фраз из Firestore
+    async function loadPhrases() {
+      phrases = [];
+      const querySnapshot = await getDocs(collection(db, "phrases"));
+      querySnapshot.forEach((doc) => {
+        phrases.push(doc.data().text);
+      });
+    }
+
+    function getRandomIndex() {
+      if (usedIndexes.length === phrases.length) {
+        usedIndexes = [];
+      }
+      let idx;
+      do {
+        idx = Math.floor(Math.random() * phrases.length);
+      } while (usedIndexes.includes(idx));
+      usedIndexes.push(idx);
+      return idx;
+    }
+
+    function showRandomCard() {
+      if (phrases.length === 0) return;
+      const idx = getRandomIndex();
+      document.getElementById('card').textContent = phrases[idx];
+    }
+
+    // Проверка текста
+    function validateInput(text) {
+      const errorMsg = document.getElementById('errorMsg');
+      errorMsg.textContent = "";
+      text = text.trim();
+      if (text.length === 0) {
+        errorMsg.textContent = "Поле не должно быть пустым.";
+        return false;
+      }
+      if (text.length > 300) {
+        errorMsg.textContent = "Максимум 300 символов.";
+        return false;
+      }
+      if (phrases.includes(text)) {
+        errorMsg.textContent = "Такая фраза уже есть в списке.";
+        return false;
+      }
+      const allowed = /^[a-zA-Zа-яА-ЯёЁ0-9\s.,!?\-:;'"\n]+$/u;
+      if (!allowed.test(text)) {
+        errorMsg.textContent = "Разрешены только буквы, цифры, пробелы и стандартные знаки препинания.";
+        return false;
+      }
+      if (text.includes('<') || text.includes('>') || text.toLowerCase().includes('data:image')) {
+        errorMsg.textContent = "HTML-теги и картинки запрещены.";
+        return false;
+      }
+      if (/\p{Emoji}/u.test(text)) {
+        errorMsg.textContent = "Эмодзи запрещены.";
+        return false;
+      }
+      if (/^([.,!?\-:;'"\s])\1{2,}$/.test(text)) {
+        errorMsg.textContent = "Фраза не должна состоять только из одинаковых символов.";
+        return false;
+      }
+      return true;
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', async function() {
+      const userInput = document.getElementById('userInput');
+      let text = userInput.value.trim();
+
+      if (validateInput(text)) {
+        await addDoc(collection(db, "phrases"), { text });
+        phrases.push(text);
+        document.getElementById('errorMsg').textContent = "Фраза добавлена!";
+        userInput.value = "";
+        setTimeout(() => {
+          document.getElementById('errorMsg').textContent = "";
+        }, 1500);
+      }
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', showRandomCard);
+
+    document.getElementById('userInput').addEventListener('input', function() {
+      if (this.value.length > 300) {
+        this.value = this.value.slice(0, 300);
+      }
+    });
+
+    // При загрузке страницы — получить фразы из Firestore и показать карточку
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadPhrases();
+      showRandomCard();
+    });
+  </script>
 </body>
 </html>
